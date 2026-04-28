@@ -535,6 +535,20 @@
   color: var(--foreground);
 }
 
+.summary__badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary);
+  background: rgba(2, 203, 201, 0.1);
+  border-radius: 9999px;
+  vertical-align: middle;
+}
+
 /* ── Buttons ─────────────────────────────────────────────────────────── */
 .btn {
   display: inline-flex;

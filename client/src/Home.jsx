@@ -21,7 +21,7 @@ export default function Home() {
   const [showResults, setShowResults] = useState(false)
   const [searchError, setSearchError] = useState(null)
 
-  const [basket, setBasket] = useState({ items: [], subtotal: 0, total: 0 })
+  const [basket, setBasket] = useState({ items: [], subtotal: 0, delivery: 0, total: 0 })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
@@ -261,6 +261,20 @@ export default function Home() {
                   <div className="summary__row">
                     <dt>Subtotal</dt>
                     <dd>{formatMoney(basket.subtotal)}</dd>
+                  </div>
+
+                  <div className="summary__row">
+                    <dt>
+                      Delivery
+                      {basket.delivery === 0 && basket.subtotal > 0 && (
+                        <span className="summary__badge">Free</span>
+                      )}
+                    </dt>
+                    <dd>
+                      {basket.delivery === 0
+                        ? '—'
+                        : formatMoney(basket.delivery)}
+                    </dd>
                   </div>
                   <div className="summary__row summary__row--total">
                     <dt>Total</dt>

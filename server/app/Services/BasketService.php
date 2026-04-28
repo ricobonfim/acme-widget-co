@@ -9,6 +9,10 @@ class BasketService
 {
     private const SESSION_KEY = 'basket.items'; // [code => qty]
 
+    public function __construct(private DeliveryService $delivery)
+    {
+    }
+
     /**
      * Add a product (by code) to the basket. Increments qty if it already exists.
      */
@@ -83,6 +87,7 @@ class BasketService
             return [
                 'items'    => [],
                 'subtotal' => 0,
+                'delivery' => 0,
                 'total'    => 0,
             ];
         }
@@ -110,10 +115,13 @@ class BasketService
             ];
         }
 
+        $delivery = $this->delivery->costFor($subtotal);
+
         return [
             'items'    => $lines,
             'subtotal' => $subtotal,
-            'total'    => $subtotal, // tax rules will be applied later
+            'delivery' => $delivery,
+            'total'    => $subtotal + $delivery, // tax rules will be applied later
         ];
     }
 }
