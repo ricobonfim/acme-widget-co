@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from './api'
 import { formatMoney } from './format'
+import { ToastStack, useToasts } from './Toast'
 import './Home.css'
 
 /** Debounce a value so we don't hammer the API on every keystroke. */
@@ -31,6 +32,7 @@ export default function Home() {
   })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const { toasts, push: pushToast, dismiss: dismissToast } = useToasts()
 
   const searchBoxRef = useRef(null)
 
@@ -66,21 +68,27 @@ export default function Home() {
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [])
 
-  async function withBusy(fn) {
+  /**
+   * Run a basket-mutating API call, update state, and surface success/failure
+   * to the user via a toast. `successMessage` may be a string or null (silent).
+   */
+  async function withBusy(fn, successMessage = null) {
     setBusy(true)
     setError(null)
     try {
       const next = await fn()
       setBasket(next)
+      if (successMessage) pushToast(successMessage)
     } catch (e) {
       setError(e.message)
+      pushToast(e.message || 'Something went wrong', { variant: 'error' })
     } finally {
       setBusy(false)
     }
   }
 
   const handleAdd = (product) => {
-    withBusy(() => api.addToBasket(product.code))
+    withBusy(() => api.addToBasket(product.code), `Added ${product.name} to basket`)
     setQuery('')
     setShowResults(false)
   }
@@ -88,11 +96,23 @@ export default function Home() {
   const handleQuantityChange = (code, qty) => {
     const quantity = Number.parseInt(qty, 10)
     if (Number.isNaN(quantity)) return
-    withBusy(() => api.setQuantity(code, Math.max(0, quantity)))
+    const clamped = Math.max(0, quantity)
+    // Removing a line via the stepper hitting zero deserves its own message.
+    const item = basket.items.find((i) => i.code === code)
+    const name = item?.name ?? code
+    const message = clamped === 0
+      ? `Removed ${name} from basket`
+      : `Updated ${name} quantity to ${clamped}`
+    withBusy(() => api.setQuantity(code, clamped), message)
   }
 
-  const handleRemove = (code) => withBusy(() => api.removeFromBasket(code))
-  const handleClear = () => withBusy(() => api.clearBasket())
+  const handleRemove = (code) => {
+    const item = basket.items.find((i) => i.code === code)
+    const name = item?.name ?? code
+    return withBusy(() => api.removeFromBasket(code), `Removed ${name} from basket`)
+  }
+
+  const handleClear = () => withBusy(() => api.clearBasket(), 'Basket cleared')
 
   const itemCount = basket.items.reduce((n, i) => n + i.quantity, 0)
 
@@ -328,6 +348,7 @@ export default function Home() {
           </span>
         </div>
       </footer>
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   )
 }
