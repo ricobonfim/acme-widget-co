@@ -101,7 +101,7 @@ export default function Home() {
       <header className="topbar">
         <div className="topbar__inner">
           <a href="/" className="brand" aria-label="QuickCart home">
-            <span className="brand__mark" aria-hidden="true" />
+            <BrandMark />
             <span className="brand__name">QuickCart</span>
           </a>
           <div className="topbar__basket-pill" aria-label="Basket summary">
@@ -319,7 +319,7 @@ export default function Home() {
       <footer className="footer">
         <div className="footer__inner">
           <span className="footer__brand">
-            <span className="brand__mark brand__mark--sm" aria-hidden="true" />
+            <BrandMark size={20} />
             QuickCart
           </span>
           <span className="footer__credits">
@@ -370,8 +370,41 @@ function QuantityStepper({ value, onChange, disabled }) {
   )
 }
 
-function SearchIcon({ className = '' }) {
+function BrandMark({ size = 28 }) {
+  // Inline so it can use a unique gradient id and scale crisply at any size.
+  // Mirrors /public/favicon.svg.
+  const gradId = `qc-grad-${size}`
   return (
+    <svg
+      className="brand__mark"
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      fill="none"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#02CBC9" />
+          <stop offset="1" stopColor="#1E90FF" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="60" height="60" rx="14" fill={`url(#${gradId})`} />
+      <path
+        d="M32 14 a18 18 0 1 1 -12.7 30.7"
+        stroke="#ffffff"
+        strokeWidth="6"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path d="M36 40 L48 52" stroke="#ffffff" strokeWidth="6" strokeLinecap="round" />
+      <circle cx="40" cy="50" r="3" fill="#01203A" />
+      <circle cx="48" cy="52" r="3" fill="#01203A" />
+    </svg>
+  )
+}
+
+function SearchIcon({ className = '' }) {  return (
     <svg className={className} width="20" height="20" viewBox="0 0 24 24"
       fill="none" stroke="currentColor" strokeWidth="2"
       strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

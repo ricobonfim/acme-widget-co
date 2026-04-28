@@ -44,11 +44,9 @@
 
 .brand__mark {
   display: inline-block;
-  width: 28px;
-  height: 28px;
   border-radius: 8px;
-  background: var(--gradient-cta);
   box-shadow: var(--shadow-brand);
+  flex-shrink: 0;
 }
 
 .brand__name {
@@ -651,12 +649,6 @@
   font-weight: 700;
   color: var(--foreground);
   letter-spacing: -0.01em;
-}
-
-.brand__mark--sm {
-  width: 18px;
-  height: 18px;
-  border-radius: 5px;
 }
 
 .footer__credits strong {
