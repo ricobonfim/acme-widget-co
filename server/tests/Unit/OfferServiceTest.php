@@ -3,95 +3,84 @@
 namespace Tests\Unit;
 
 use App\Services\OfferService;
+use App\Services\Offers\Offer;
 use PHPUnit\Framework\TestCase;
 
 class OfferServiceTest extends TestCase
 {
-    private OfferService $service;
-
-    protected function setUp(): void
+    public function test_returns_empty_result_when_no_offers_are_registered(): void
     {
-        parent::setUp();
-        $this->service = new OfferService();
-    }
+        $service = new OfferService([]);
 
-    /**
-     * Helper to keep test cases compact and readable.
-     */
-    private function line(string $code, int $unitPrice, int $qty): array
-    {
-        return [
-            'code'       => $code,
-            'name'       => $code,
-            'unit_price' => $unitPrice,
-            'quantity'   => $qty,
-            'line_total' => $unitPrice * $qty,
-        ];
-    }
-
-    public function test_no_red_widget_means_no_discount(): void
-    {
-        $result = $this->service->apply([
-            $this->line('B01', 795, 3),
-            $this->line('G01', 2495, 1),
+        $result = $service->apply([
+            ['code' => 'X1', 'name' => 'X', 'unit_price' => 100, 'quantity' => 1, 'line_total' => 100],
         ]);
 
         $this->assertSame(0, $result['total']);
         $this->assertSame([], $result['discounts']);
     }
 
-    public function test_single_red_widget_does_not_trigger_offer(): void
+    public function test_collects_discounts_from_every_applicable_offer(): void
     {
-        $result = $this->service->apply([$this->line('R01', 3295, 1)]);
+        $offerA = $this->fakeOffer(['code' => 'A', 'label' => 'A', 'amount' => 100]);
+        $offerB = $this->fakeOffer(['code' => 'B', 'label' => 'B', 'amount' => 250]);
 
-        $this->assertSame(0, $result['total']);
-        $this->assertEmpty($result['discounts']);
+        $service = new OfferService([$offerA, $offerB]);
+
+        $result = $service->apply([]);
+
+        $this->assertSame(350, $result['total']);
+        $this->assertCount(2, $result['discounts']);
+        $this->assertSame(['A', 'B'], array_column($result['discounts'], 'code'));
     }
 
-    public function test_two_red_widgets_discount_one_at_half_price(): void
+    public function test_skips_offers_that_return_null(): void
     {
-        $result = $this->service->apply([$this->line('R01', 3295, 2)]);
+        $applies      = $this->fakeOffer(['code' => 'A', 'label' => 'A', 'amount' => 100]);
+        $doesNotApply = $this->fakeOffer(null);
 
-        // 3295 / 2 = 1647 (integer division, rounds in customer's favor)
-        $this->assertSame(1647, $result['total']);
+        $service = new OfferService([$applies, $doesNotApply]);
+
+        $result = $service->apply([]);
+
+        $this->assertSame(100, $result['total']);
         $this->assertCount(1, $result['discounts']);
-        $this->assertSame('R01_BOGO_HALF', $result['discounts'][0]['code']);
-        $this->assertSame(1647, $result['discounts'][0]['amount']);
+        $this->assertSame('A', $result['discounts'][0]['code']);
     }
 
-    public function test_three_red_widgets_form_only_one_pair(): void
+    public function test_passes_lines_through_to_each_offer(): void
     {
-        // 3 → 1 pair → 1 × 1647
-        $result = $this->service->apply([$this->line('R01', 3295, 3)]);
+        $lines = [
+            ['code' => 'X1', 'name' => 'X', 'unit_price' => 100, 'quantity' => 1, 'line_total' => 100],
+        ];
 
-        $this->assertSame(1647, $result['total']);
+        $captured = null;
+        $spy = new class($captured) implements Offer {
+            public function __construct(private &$captured) {}
+            public function applyTo(array $lines): ?array
+            {
+                $this->captured = $lines;
+                return null;
+            }
+        };
+
+        (new OfferService([$spy]))->apply($lines);
+
+        $this->assertSame($lines, $captured);
     }
 
-    public function test_four_red_widgets_form_two_pairs(): void
+    /**
+     * Build an anonymous Offer that always returns the given discount
+     * descriptor (or null when not applicable).
+     */
+    private function fakeOffer(?array $discount): Offer
     {
-        // 4 → 2 pairs → 2 × 1647 = 3294
-        $result = $this->service->apply([$this->line('R01', 3295, 4)]);
-
-        $this->assertSame(3294, $result['total']);
-    }
-
-    public function test_other_products_alongside_red_widget_are_unaffected(): void
-    {
-        $result = $this->service->apply([
-            $this->line('R01', 3295, 2),
-            $this->line('B01', 795, 5),
-            $this->line('G01', 2495, 1),
-        ]);
-
-        $this->assertSame(1647, $result['total']);
-        $this->assertCount(1, $result['discounts']);
-    }
-
-    public function test_odd_unit_price_rounds_in_customers_favor(): void
-    {
-        // Unit price 99 → half is 49.5 → intdiv keeps 49 (cheaper for the customer)
-        $result = $this->service->apply([$this->line('R01', 99, 2)]);
-
-        $this->assertSame(49, $result['total']);
+        return new class($discount) implements Offer {
+            public function __construct(private ?array $discount) {}
+            public function applyTo(array $lines): ?array
+            {
+                return $this->discount;
+            }
+        };
     }
 }

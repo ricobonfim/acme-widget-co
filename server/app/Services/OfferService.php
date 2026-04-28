@@ -2,40 +2,34 @@
 
 namespace App\Services;
 
+use App\Services\Offers\Offer;
+
 class OfferService
 {
     /**
-     * Apply all active offers to the given basket lines.
+     * @param  iterable<Offer>  $offers  Active offers, registered in the
+     *         service container. Order matters only if offers can interact;
+     *         the current rule set is independent.
+     */
+    public function __construct(private iterable $offers = [])
+    {
+    }
+
+    /**
+     * Run every registered offer against the basket and collect discounts.
      *
      * @param  array  $lines  Basket lines: [{code, name, unit_price, quantity, line_total}, ...]
      * @return array{discounts: array<int, array{code: string, label: string, amount: int}>, total: int}
-     *         `total` is the sum of all discount amounts (in cents, positive number).
+     *         `total` is the sum of all discount amounts (cents, positive).
      */
     public function apply(array $lines): array
     {
-        $byCode = [];
-        foreach ($lines as $line) {
-            $byCode[$line['code']] = $line;
-        }
-
         $discounts = [];
 
-        // ── Offer: Buy one Red Widget, get the second half price ────────────
-        // For every pair of R01 in the basket, the second one is 50% off.
-        if (isset($byCode['R01'])) {
-            $r01      = $byCode['R01'];
-            $pairs    = intdiv($r01['quantity'], 2);
-            if ($pairs > 0) {
-                // Half off the unit price, per pair. Use intdiv to keep integer cents;
-                // odd unit prices round in the customer's favor (cheaper).
-                $perPair = intdiv($r01['unit_price'], 2);
-                $amount  = $pairs * $perPair;
-
-                $discounts[] = [
-                    'code'   => 'R01_BOGO_HALF',
-                    'label'  => 'Red Widget: 2nd half price',
-                    'amount' => $amount,
-                ];
+        foreach ($this->offers as $offer) {
+            $discount = $offer->applyTo($lines);
+            if ($discount !== null) {
+                $discounts[] = $discount;
             }
         }
 
