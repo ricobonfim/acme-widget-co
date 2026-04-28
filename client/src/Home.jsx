@@ -302,6 +302,11 @@ export default function Home() {
                               Offer
                             </span>
                             {d.label}
+                            {d.times_applied > 1 && (
+                              <span className="summary__times" aria-label={`Applied ${d.times_applied} times`}>
+                                ×{d.times_applied}
+                              </span>
+                            )}
                           </dt>
                           <dd>−{formatMoney(d.amount)}</dd>
                         </div>

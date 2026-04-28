@@ -11,9 +11,10 @@ namespace App\Services\Offers;
  * pair is ceil(unit_price / 2).
  *
  * Example: 2 × R01 @ 3295¢
- *   subtotal = 6590¢
- *   discount = ceil(3295/2) = 1648¢
- *   net      = 4942¢  → $49.42 (then + delivery)
+ *   subtotal      = 6590¢
+ *   discount/pair = ceil(3295/2) = 1648¢
+ *   times_applied = 1
+ *   amount        = 1648¢ → net 4942¢ ($49.42)
  */
 class RedWidgetBogoHalfPrice implements Offer
 {
@@ -49,9 +50,10 @@ class RedWidgetBogoHalfPrice implements Offer
         }
 
         return [
-            'code'   => self::CODE,
-            'label'  => self::LABEL,
-            'amount' => $amount,
+            'code'          => self::CODE,
+            'label'         => self::LABEL,
+            'amount'        => $amount,
+            'times_applied' => $pairs,
         ];
     }
 }

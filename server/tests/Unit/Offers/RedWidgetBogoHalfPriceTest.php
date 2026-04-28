@@ -47,6 +47,7 @@ class RedWidgetBogoHalfPriceTest extends TestCase
         $this->assertSame('R01_BOGO_HALF', $discount['code']);
         // ceil(3295 / 2) = 1648 — discount rounds up so the customer pays less.
         $this->assertSame(1648, $discount['amount']);
+        $this->assertSame(1, $discount['times_applied']);
     }
 
     public function test_three_red_widgets_form_only_one_pair(): void
@@ -54,6 +55,7 @@ class RedWidgetBogoHalfPriceTest extends TestCase
         $discount = $this->offer->applyTo([$this->line('R01', 3295, 3)]);
 
         $this->assertSame(1648, $discount['amount']);
+        $this->assertSame(1, $discount['times_applied']);
     }
 
     public function test_four_red_widgets_form_two_pairs(): void
@@ -62,6 +64,7 @@ class RedWidgetBogoHalfPriceTest extends TestCase
 
         // 2 pairs × ceil(3295/2) = 2 × 1648 = 3296
         $this->assertSame(3296, $discount['amount']);
+        $this->assertSame(2, $discount['times_applied']);
     }
 
     public function test_other_products_alongside_red_widget_are_ignored(): void
@@ -73,6 +76,7 @@ class RedWidgetBogoHalfPriceTest extends TestCase
         ]);
 
         $this->assertSame(1648, $discount['amount']);
+        $this->assertSame(1, $discount['times_applied']);
     }
 
     public function test_even_unit_price_halves_exactly(): void
