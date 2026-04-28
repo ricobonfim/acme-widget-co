@@ -549,6 +549,24 @@
   vertical-align: middle;
 }
 
+.summary__badge--offer {
+  margin-left: 0;
+  margin-right: 0.5rem;
+  color: #b45309;
+  background: rgba(251, 191, 36, 0.18);
+}
+
+.summary__row--discount dt {
+  color: var(--foreground);
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.summary__row--discount dd {
+  color: #b45309;
+  font-weight: 600;
+}
+
 /* ── Buttons ─────────────────────────────────────────────────────────── */
 .btn {
   display: inline-flex;

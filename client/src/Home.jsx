@@ -21,7 +21,14 @@ export default function Home() {
   const [showResults, setShowResults] = useState(false)
   const [searchError, setSearchError] = useState(null)
 
-  const [basket, setBasket] = useState({ items: [], subtotal: 0, delivery: 0, total: 0 })
+  const [basket, setBasket] = useState({
+    items: [],
+    subtotal: 0,
+    discounts: [],
+    discount_total: 0,
+    delivery: 0,
+    total: 0,
+  })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
@@ -262,6 +269,25 @@ export default function Home() {
                     <dt>Subtotal</dt>
                     <dd>{formatMoney(basket.subtotal)}</dd>
                   </div>
+
+                  {basket.discounts && basket.discounts.length > 0 && (
+                    <>
+                      {basket.discounts.map((d) => (
+                        <div
+                          key={d.code}
+                          className="summary__row summary__row--discount"
+                        >
+                          <dt>
+                            <span className="summary__badge summary__badge--offer">
+                              Offer
+                            </span>
+                            {d.label}
+                          </dt>
+                          <dd>−{formatMoney(d.amount)}</dd>
+                        </div>
+                      ))}
+                    </>
+                  )}
 
                   <div className="summary__row">
                     <dt>

@@ -9,8 +9,10 @@ class BasketService
 {
     private const SESSION_KEY = 'basket.items'; // [code => qty]
 
-    public function __construct(private DeliveryService $delivery)
-    {
+    public function __construct(
+        private DeliveryService $delivery,
+        private OfferService $offers,
+    ) {
     }
 
     /**
@@ -78,6 +80,12 @@ class BasketService
     /**
      * Build the current basket payload, hydrating product info and computing totals.
      * All money values are returned as integer cents.
+     *
+     * Calculation order (per requirements):
+     *   1. Subtotal     = sum of line totals
+     *   2. Discounts    = special offers applied to lines
+     *   3. Delivery     = tiered cost based on (subtotal - discounts)
+     *   4. Total        = subtotal - discounts + delivery
      */
     public function snapshot(): array
     {
@@ -85,10 +93,12 @@ class BasketService
 
         if (empty($items)) {
             return [
-                'items'    => [],
-                'subtotal' => 0,
-                'delivery' => 0,
-                'total'    => 0,
+                'items'     => [],
+                'subtotal'  => 0,
+                'discounts' => [],
+                'discount_total' => 0,
+                'delivery'  => 0,
+                'total'     => 0,
             ];
         }
 
@@ -115,13 +125,18 @@ class BasketService
             ];
         }
 
-        $delivery = $this->delivery->costFor($subtotal);
+        $offerResult     = $this->offers->apply($lines);
+        $discountTotal   = $offerResult['total'];
+        $discountedSub   = max(0, $subtotal - $discountTotal);
+        $deliveryCost    = $this->delivery->costFor($discountedSub);
 
         return [
-            'items'    => $lines,
-            'subtotal' => $subtotal,
-            'delivery' => $delivery,
-            'total'    => $subtotal + $delivery, // tax rules will be applied later
+            'items'          => $lines,
+            'subtotal'       => $subtotal,
+            'discounts'      => $offerResult['discounts'],
+            'discount_total' => $discountTotal,
+            'delivery'       => $deliveryCost,
+            'total'          => $discountedSub + $deliveryCost,
         ];
     }
 }
