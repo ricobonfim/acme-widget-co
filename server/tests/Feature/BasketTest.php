@@ -164,12 +164,12 @@ class BasketTest extends TestCase
         $response = $this->postJson('/api/basket/items', ['code' => 'R01', 'quantity' => 2])
             ->assertOk();
 
-        // subtotal = 6590, discount = 1647, post-discount = 4943 → delivery 495,
-        // total = 4943 + 495 = 5438
+        // subtotal = 6590, discount = 1648 (ceil(3295/2)), post-discount = 4942
+        // → delivery 495 (under $50 tier), total = 4942 + 495 = 5437
         $response->assertJsonPath('subtotal', 6590)
-                 ->assertJsonPath('discount_total', 1647)
+                 ->assertJsonPath('discount_total', 1648)
                  ->assertJsonPath('delivery', 495)
-                 ->assertJsonPath('total', 5438)
+                 ->assertJsonPath('total', 5437)
                  ->assertJsonPath('discounts.0.code', 'R01_BOGO_HALF');
     }
 
@@ -187,12 +187,13 @@ class BasketTest extends TestCase
     {
         $this->seedWidgets();
 
-        // 4 × R01 = $131.80, discount = $32.94, post-discount = $98.86 → free delivery
+        // 4 × R01 = $131.80, discount = 2 × ceil(3295/2) = $32.96,
+        // post-discount = $98.84 → free delivery
         $this->postJson('/api/basket/items', ['code' => 'R01', 'quantity' => 4])
             ->assertJsonPath('subtotal', 13180)
-            ->assertJsonPath('discount_total', 3294)
+            ->assertJsonPath('discount_total', 3296)
             ->assertJsonPath('delivery', 0)
-            ->assertJsonPath('total', 9886);
+            ->assertJsonPath('total', 9884);
     }
 
     public function test_basket_persists_across_requests_via_session(): void

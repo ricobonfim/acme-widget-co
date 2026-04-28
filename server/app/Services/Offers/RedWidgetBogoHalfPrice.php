@@ -6,7 +6,14 @@ namespace App\Services\Offers;
  * "Buy one Red Widget, get the second half price."
  *
  * For every pair of R01 in the basket, the second one is sold at half its
- * unit price. Odd-priced products round in the customer's favor (intdiv).
+ * unit price. When the unit price is odd (e.g. 3295¢), we round the
+ * discount UP so the customer pays slightly less — i.e. the discount per
+ * pair is ceil(unit_price / 2).
+ *
+ * Example: 2 × R01 @ 3295¢
+ *   subtotal = 6590¢
+ *   discount = ceil(3295/2) = 1648¢
+ *   net      = 4942¢  → $49.42 (then + delivery)
  */
 class RedWidgetBogoHalfPrice implements Offer
 {
@@ -33,7 +40,8 @@ class RedWidgetBogoHalfPrice implements Offer
             return null;
         }
 
-        $perPair = intdiv($line['unit_price'], 2);
+        // ceil(n/2) for non-negative ints, no floats: (n + 1) intdiv 2.
+        $perPair = intdiv($line['unit_price'] + 1, 2);
         $amount  = $pairs * $perPair;
 
         if ($amount <= 0) {

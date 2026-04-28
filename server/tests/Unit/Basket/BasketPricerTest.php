@@ -68,21 +68,21 @@ class BasketPricerTest extends TestCase
 
     public function test_offer_is_applied_before_delivery_tier(): void
     {
-        // 2 × R01 = 6590 raw → discount 1647 → discounted 4943 → falls in <$50 tier (495).
+        // 2 × R01 = 6590 raw → discount 1648 (ceil) → discounted 4942 → <$50 tier (495).
         $snapshot = $this->pricer->priceFor(['R01' => 2]);
 
         $this->assertSame(6590, $snapshot['subtotal']);
-        $this->assertSame(1647, $snapshot['discount_total']);
+        $this->assertSame(1648, $snapshot['discount_total']);
         $this->assertSame(495, $snapshot['delivery']);
-        $this->assertSame(5438, $snapshot['total']);
+        $this->assertSame(5437, $snapshot['total']);
     }
 
     public function test_high_value_basket_gets_free_delivery(): void
     {
-        // 4 × R01 = 13180 raw → discount 3294 → discounted 9886 → free delivery.
+        // 4 × R01 = 13180 raw → discount 3296 (2×ceil) → discounted 9884 → free delivery.
         $snapshot = $this->pricer->priceFor(['R01' => 4]);
 
         $this->assertSame(0, $snapshot['delivery']);
-        $this->assertSame(9886, $snapshot['total']);
+        $this->assertSame(9884, $snapshot['total']);
     }
 }

@@ -45,21 +45,23 @@ class RedWidgetBogoHalfPriceTest extends TestCase
 
         $this->assertNotNull($discount);
         $this->assertSame('R01_BOGO_HALF', $discount['code']);
-        $this->assertSame(1647, $discount['amount']); // intdiv(3295, 2)
+        // ceil(3295 / 2) = 1648 — discount rounds up so the customer pays less.
+        $this->assertSame(1648, $discount['amount']);
     }
 
     public function test_three_red_widgets_form_only_one_pair(): void
     {
         $discount = $this->offer->applyTo([$this->line('R01', 3295, 3)]);
 
-        $this->assertSame(1647, $discount['amount']);
+        $this->assertSame(1648, $discount['amount']);
     }
 
     public function test_four_red_widgets_form_two_pairs(): void
     {
         $discount = $this->offer->applyTo([$this->line('R01', 3295, 4)]);
 
-        $this->assertSame(3294, $discount['amount']);
+        // 2 pairs × ceil(3295/2) = 2 × 1648 = 3296
+        $this->assertSame(3296, $discount['amount']);
     }
 
     public function test_other_products_alongside_red_widget_are_ignored(): void
@@ -70,14 +72,22 @@ class RedWidgetBogoHalfPriceTest extends TestCase
             $this->line('G01', 2495, 1),
         ]);
 
-        $this->assertSame(1647, $discount['amount']);
+        $this->assertSame(1648, $discount['amount']);
     }
 
-    public function test_odd_unit_price_rounds_in_customers_favor(): void
+    public function test_even_unit_price_halves_exactly(): void
     {
-        // Unit price 99 → half is 49.5 → intdiv keeps 49 (cheaper for the customer).
+        // No rounding needed: 100 / 2 = 50 exactly.
+        $discount = $this->offer->applyTo([$this->line('R01', 100, 2)]);
+
+        $this->assertSame(50, $discount['amount']);
+    }
+
+    public function test_odd_unit_price_rounds_discount_up(): void
+    {
+        // Unit price 99 → half is 49.5 → ceil = 50 (bigger discount, cheaper for customer).
         $discount = $this->offer->applyTo([$this->line('R01', 99, 2)]);
 
-        $this->assertSame(49, $discount['amount']);
+        $this->assertSame(50, $discount['amount']);
     }
 }
