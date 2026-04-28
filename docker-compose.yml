@@ -1,0 +1,33 @@
+services:
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:4001
+    depends_on:
+      - server
+    networks:
+      - thrivecart
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "4001:4001"
+    volumes:
+      - ./server:/var/www/html
+    env_file:
+      - ./server/.env
+    networks:
+      - thrivecart
+
+networks:
+  thrivecart:
+    driver: bridge
