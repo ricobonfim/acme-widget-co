@@ -1,0 +1,6 @@
+node_modules
+.npm
+dist
+.env*.local
+coverage
+.DS_Store
