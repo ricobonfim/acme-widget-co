@@ -23,7 +23,7 @@ class BasketController extends Controller
 
     /**
      * POST /api/basket/items   { code: string, quantity?: int }
-     * Adds a product to the basket (increments qty if already present).
+     * Adds a product to the basket (increments quantity if already present).
      */
     public function add(Request $request): JsonResponse
     {

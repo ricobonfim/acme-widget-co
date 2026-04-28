@@ -81,7 +81,7 @@ class BasketService
      * Build the current basket payload, hydrating product info and computing totals.
      * All money values are returned as integer cents.
      *
-     * Calculation order (per requirements):
+     * Calculation order:
      *   1. Subtotal     = sum of line totals
      *   2. Discounts    = special offers applied to lines
      *   3. Delivery     = tiered cost based on (subtotal - discounts)
