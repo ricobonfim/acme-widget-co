@@ -1,59 +1,180 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# QuickCart — server
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel 12 API for the Acme Widget Co basket. Owns product search, the
+basket session, the pricing pipeline (subtotal → offers → delivery →
+total), and the database.
 
-## About Laravel
+> Run from the repo root via Docker Compose. This README covers
+> server-specific commands, structure, and conventions.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Running
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+The server is brought up by the root `docker compose up -d`. From outside
+the container it's reachable at <http://localhost:4001>.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+When the container starts for the first time, `docker/entrypoint.sh`:
 
-## Learning Laravel
+1. Touches/chowns `database/database.sqlite` (host vs container uid).
+2. Runs `php artisan migrate --force`.
+3. Runs `php artisan db:seed --force` to load the three widgets.
+4. Hands off to `supervisord` (nginx + php-fpm).
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Common commands
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+All commands run **inside the container**:
 
-## Laravel Sponsors
+```bash
+# enter a shell
+docker compose exec server bash
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# run the test suite (Pest/PHPUnit)
+docker compose exec server php artisan test
+docker compose exec server php artisan test --filter=BasketPricerTest
 
-### Premium Partners
+# database
+docker compose exec server php artisan migrate:fresh --seed
+docker compose exec server php artisan tinker
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+# clear caches if config feels stale
+docker compose exec server php artisan optimize:clear
 
-## Contributing
+# composer
+docker compose exec server composer install
+docker compose exec server composer dump-autoload
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Folder structure
 
-## Code of Conduct
+```
+server/
+├── app/
+│   ├── Http/Controllers/Api/
+│   │   ├── ProductController.php   GET /products?q=
+│   │   └── BasketController.php    show / add / update / remove / clear
+│   ├── Models/
+│   │   └── Product.php
+│   ├── Providers/
+│   │   └── AppServiceProvider.php  ← ACTIVE_OFFERS list, DI bindings
+│   └── Services/
+│       ├── Basket/
+│       │   ├── BasketRepository.php  session persistence ([code => qty])
+│       │   └── BasketPricer.php      subtotal → offers → delivery pipeline
+│       ├── BasketService.php         thin coordinator (mutations)
+│       ├── DeliveryService.php       tiered delivery rules
+│       ├── OfferService.php          loops over Offer strategies
+│       └── Offers/
+│           ├── Offer.php             interface (applyTo: ?array)
+│           └── RedWidgetBogoHalfPrice.php
+├── routes/
+│   └── api.php                       6 endpoints under /api
+├── database/
+│   ├── factories/ProductFactory.php
+│   ├── migrations/                   products table
+│   ├── seeders/                      ProductSeeder seeds R01/G01/B01
+│   └── database.sqlite               git-ignored, created at boot
+├── tests/
+│   ├── Unit/
+│   │   ├── Basket/
+│   │   │   ├── BasketPricerTest.php
+│   │   │   └── BasketRepositoryTest.php
+│   │   ├── DeliveryServiceTest.php   data-provider tier boundaries
+│   │   ├── OfferServiceTest.php      orchestrator (uses fake Offers)
+│   │   └── Offers/
+│   │       └── RedWidgetBogoHalfPriceTest.php
+│   └── Feature/
+│       ├── ProductSearchTest.php
+│       └── BasketTest.php            full HTTP integration
+├── docker/
+│   ├── nginx-site.conf
+│   ├── supervisord.conf
+│   └── entrypoint.sh
+├── Dockerfile
+├── phpunit.xml                       :memory: SQLite, array session driver
+└── composer.json
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Architectural conventions
 
-## Security Vulnerabilities
+### Layers
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```
+Controller        ── shapes HTTP, no logic
+   │
+   ▼
+BasketService     ── coordinator: validates, mutates, returns snapshot
+   │
+   ├──► BasketRepository  ── session persistence only
+   │
+   └──► BasketPricer      ── pricing pipeline
+          │
+          ├──► OfferService     ──► Offer[]  (strategy)
+          └──► DeliveryService  ── declarative tier rules
+```
 
-## License
+`BasketService` itself holds no pricing or persistence logic — both are
+delegated. Read it as a table of contents for what each mutation does.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Money
+
+Everything server-side is **integer cents** (`int`). Floats never enter
+arithmetic. `RedWidgetBogoHalfPrice` uses `intdiv($unit + 1, 2)` to
+compute `ceil(unit/2)` without ever creating a float.
+
+### Adding a new offer
+
+1. Create a class implementing `App\Services\Offers\Offer`:
+   ```php
+   public function applyTo(array $lines): ?array
+   {
+       // return null when not applicable
+       return [
+           'code'          => 'MY_OFFER',
+           'label'         => 'Buy 3 get 1 free',
+           'amount'        => $discountInCents,
+           'times_applied' => $count, // optional, surfaces in the UI
+       ];
+   }
+   ```
+2. Add the FQCN to `AppServiceProvider::ACTIVE_OFFERS`.
+3. Write a unit test next to `RedWidgetBogoHalfPriceTest`.
+
+That's it — no other file changes. The `OfferService` will pick it up via
+the container.
+
+### Adding a new delivery tier
+
+Edit the `TIERS` constant on `DeliveryService`. Each entry is
+`['under_cents' => N, 'cost_cents' => M]`; the first match wins.
+
+## Configuration
+
+Cross-origin session cookies require these in `.env`:
+
+```
+SESSION_DRIVER=file
+SESSION_SAME_SITE=none
+SESSION_SECURE_COOKIE=true
+SANCTUM_STATEFUL_DOMAINS=localhost:4000
+```
+
+`config/cors.php` allows `http://localhost:4000` with credentials. The
+`api` middleware group is registered in `bootstrap/app.php` to include
+sessions and cookies but **not** CSRF — this is a stateful session API
+without forms, so CSRF is unnecessary and would block JSON clients.
+
+## Testing notes
+
+- `phpunit.xml` switches to `:memory:` SQLite and the `array` session
+  driver, so feature tests are fast and isolated.
+- `BasketRepositoryTest` constructs a real `Illuminate\Session\Store`
+  with an `ArraySessionHandler` rather than mocking the facade — the
+  tests exercise the same contract Laravel injects in production.
+- `OfferServiceTest` uses anonymous `Offer` implementations as fakes, so
+  the orchestrator is tested without depending on any concrete rule.
+
+Run a single suite:
+
+```bash
+docker compose exec server php artisan test --testsuite=Unit
+docker compose exec server php artisan test --testsuite=Feature
+```
