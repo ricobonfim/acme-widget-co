@@ -19,7 +19,16 @@ fi
 # UID mismatch between the host bind-mount owner and the www-data (uid 33) process.
 if [ -d "/var/www/html/database" ]; then
     chmod 777 /var/www/html/database
+    # Touch the SQLite file if it doesn't exist yet so migrations can open it.
+    [ -f /var/www/html/database/database.sqlite ] || touch /var/www/html/database/database.sqlite
     find /var/www/html/database -name "*.sqlite" -exec chmod 666 {} \;
 fi
+
+# Run migrations + seed on every boot. Migrations are idempotent (they
+# track ran state in the migrations table) and ProductSeeder uses
+# DB::updateOrInsert keyed on `code`, so this is safe to repeat.
+echo "[entrypoint] Running migrations + seed..."
+php artisan migrate --force
+php artisan db:seed --force
 
 exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf

@@ -1,7 +1,5 @@
 <?php
 
-use App\Models\User;
-
 return [
 
     /*
@@ -62,9 +60,12 @@ return [
     */
 
     'providers' => [
+        // No auth in QuickCart — the basket lives in an anonymous session.
+        // The provider stub is kept so any framework code that probes the
+        // auth config doesn't choke on a missing key.
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', User::class),
+            'model'  => env('AUTH_MODEL'),
         ],
 
         // 'users' => [
